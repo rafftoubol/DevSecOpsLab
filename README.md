@@ -45,4 +45,5 @@ The lab is structured in phases:
 3. Container Platform Setup []
 4. Kubernetes Hardening []
 5. CI/CD w/ Security Gates []
+  - IaC Scanning with tfSec [x]
 6. Runtime Security []
