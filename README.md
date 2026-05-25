@@ -8,77 +8,7 @@ The lab assumes an empty AWS account and provisions everything via Terraform, fr
 
 ## Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        GitHub Actions                               │
-│                                                                     │
-│  Push to web-server/                                                │
-│       │                                                             │
-│       ▼                                                             │
-│  ┌─────────────────────┐                                            │
-│  │ container-security  │  ← tfsec on *.tf changes                  │
-│  │                     │                                            │
-│  │ 1. Base image check │ ← fetch allowlist from S3 (KMS-encrypted) │
-│  │    (SHA256 pinning)  │                                            │
-│  │ 2. Dockerfile lint  │ ← hadolint                                 │
-│  └──────────┬──────────┘                                            │
-│             │ (pass)                                                │
-│             ▼                                                       │
-│  ┌─────────────────────┐                                            │
-│  │  build-scan-push    │                                            │
-│  │                     │                                            │
-│  │ 1. Build image      │ ← multi-stage, distroless runtime          │
-│  │ 2. Trivy scan       │ ← blocks on CRITICAL/HIGH CVEs             │
-│  │ 3. Push to ECR      │ ← only on main, immutable tags, KMS        │
-│  └──────────┬──────────┘                                            │
-│             │ (main branch only)                                    │
-│             ▼                                                       │
-│  ┌─────────────────────┐                                            │
-│  │  sign-and-attest    │                                            │
-│  │                     │                                            │
-│  │ 1. Cosign sign      │ ← keyless OIDC, stored in ECR              │
-│  │ 2. Generate SBOM    │ ← Syft, SPDX JSON                          │
-│  │ 3. Attest SBOM      │ ← Cosign attestation in registry           │
-│  └─────────────────────┘                                            │
-└─────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                         AWS Infrastructure                          │
-│                                                                     │
-│  eu-north-1                                                         │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │  VPC (10.0.0.0/16)                                          │   │
-│  │                                                             │   │
-│  │  ┌──────────────────┐    ┌──────────────────┐              │   │
-│  │  │  Public Subnets  │    │  Private Subnets  │             │   │
-│  │  │  (IGW routing)   │    │  (NAT routing)    │             │   │
-│  │  └────────┬─────────┘    └────────┬──────────┘             │   │
-│  │           │ (NAT GW)              │                         │   │
-│  │           └──────────────────────┘                         │   │
-│  │                        │                                   │   │
-│  │              ┌──────────▼──────────┐                       │   │
-│  │              │   EKS Cluster 1.32  │                       │   │
-│  │              │                     │                       │   │
-│  │              │  ┌───────────────┐  │                       │   │
-│  │              │  │  Node Group   │  │ ← IMDSv2, KMS EBS     │   │
-│  │              │  │  (t3.medium)  │  │                       │   │
-│  │              │  └───────────────┘  │                       │   │
-│  │              │                     │                       │   │
-│  │              │  ┌───────────────┐  │                       │   │
-│  │              │  │    Kyverno    │  │ ← admission control   │   │
-│  │              │  │   Policies    │  │                       │   │
-│  │              │  └───────────────┘  │                       │   │
-│  │              └─────────────────────┘                       │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                                                                     │
-│  Supporting services:                                               │
-│  ┌───────────┐  ┌─────────────┐  ┌──────────────┐  ┌──────────┐  │
-│  │    ECR    │  │     KMS     │  │  S3 Allowlist │  │CloudWatch│  │
-│  │ (images)  │  │ (encryption)│  │  (base images)│  │  (logs)  │  │
-│  └───────────┘  └─────────────┘  └──────────────┘  └──────────┘  │
-└─────────────────────────────────────────────────────────────────────┘
-```
+<img width="1870" height="1259" alt="image" src="https://github.com/user-attachments/assets/22dbdc31-a6d1-46a1-9e95-285d445b279c" />
 
 ---
 
@@ -160,7 +90,8 @@ Kyverno failure policy is set to `IGNORE` for dev (prevents cluster lockout). Ch
 ## Container Build Security Pipeline
 
 Security is applied before the image is built, not after.
-
+### Build Security Pipeline
+<img width="2577" height="1051" alt="image" src="https://github.com/user-attachments/assets/59aba0b1-8a6f-4601-813e-99982cc84b93" />
 ```
 Push on web-server/
          │
