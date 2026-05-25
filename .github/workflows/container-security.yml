@@ -18,13 +18,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Checkout security pipelines repo
-        uses: actions/checkout@v4
-        with:
-          repository: your-org/devsecops-pipelines
-          path: devsecops-pipelines
+      - uses: actions/checkout@v5
 
       - name: Authenticate to AWS
         uses: aws-actions/configure-aws-credentials@v4
@@ -38,7 +32,7 @@ jobs:
 
       - name: Check base images against allowlist
         run: |
-          python devsecops-pipelines/scripts/check-base-images.py \
+          python scripts/check-base-images.py \
             ${{ inputs.dockerfile-path }} \
             allowlist.json
 
