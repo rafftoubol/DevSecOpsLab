@@ -3,7 +3,7 @@
   "last_updated": "2026-05-25",
   "images": [
     {
-      "ref": "ghcr.io/astral-sh/uv@sha256:e5b65587bce7de595f299855d7385fe7fca39b8a74baa261ba1b7147afa78e58",
+      "ref": "ghcr.io/astral-sh/uv:python3.12-bookworm-slim@sha256:e5b65587bce7de595f299855d7385fe7fca39b8a74baa261ba1b7147afa78e58",
       "description": "uv Python package manager - builder stage",
       "approved_by": "Raphael",
       "approved_date": "2026-05-25"

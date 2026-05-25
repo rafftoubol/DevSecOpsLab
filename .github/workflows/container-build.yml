@@ -12,6 +12,7 @@ on:
 permissions:
   id-token: write
   contents: read
+
 jobs:
   container-security:
     uses: ./.github/workflows/container-security.yml
@@ -20,12 +21,95 @@ jobs:
     secrets:
       aws-role-arn: ${{ secrets.AWS_ROLE_ARN }}
 
-  build:
+  build-scan-push:
     needs: container-security
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      security-events: write
+    outputs:
+      image-uri: ${{ steps.push.outputs.image-uri }}
     steps:
       - uses: actions/checkout@v5
 
+      - name: Authenticate to AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: eu-north-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
       - name: Build image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: docker build --no-cache -t $REGISTRY/devsecops-lab:$IMAGE_TAG web-server/
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ steps.login-ecr.outputs.registry }}/devsecops-lab:${{ github.sha }}
+          format: sarif
+          output: trivy-results.sarif
+          exit-code: "1"
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Upload scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+
+      - name: Push image to ECR
+        id: push
+        if: github.event_name != 'pull_request'
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build --no-cache -t my-fastapi-app web-server/
+          docker push $REGISTRY/devsecops-lab:$IMAGE_TAG
+          IMAGE_URI=$(docker inspect --format='{{index .RepoDigests 0}}' $REGISTRY/devsecops-lab:$IMAGE_TAG)
+          echo "image-uri=$IMAGE_URI" >> $GITHUB_OUTPUT
+
+  sign-and-attest:
+    needs: build-scan-push
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Authenticate to AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: eu-north-1
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image
+        env:
+          IMAGE_URI: ${{ needs.build-scan-push.outputs.image-uri }}
+        run: cosign sign --yes $IMAGE_URI
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ needs.build-scan-push.outputs.image-uri }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+          upload-artifact: false
+
+      - name: Attest SBOM to image
+        env:
+          IMAGE_URI: ${{ needs.build-scan-push.outputs.image-uri }}
+        run: cosign attest --yes --predicate sbom.spdx.json --type spdxjson $IMAGE_URI
