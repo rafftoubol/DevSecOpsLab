@@ -32,7 +32,7 @@ jobs:
 
       - name: Check base images against allowlist
         run: |
-          python scripts/check-base-images.py \
+          python scripts/check-base-image.py \
             ${{ inputs.dockerfile-path }} \
             allowlist.json
 
