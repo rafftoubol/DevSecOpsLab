@@ -27,7 +27,6 @@ jobs:
     permissions:
       id-token: write
       contents: read
-      security-events: write
     outputs:
       image-uri: ${{ steps.push.outputs.image-uri }}
     steps:
@@ -53,17 +52,10 @@ jobs:
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ steps.login-ecr.outputs.registry }}/devsecops-lab:${{ github.sha }}
-          format: sarif
-          output: trivy-results.sarif
+          format: table
           exit-code: "1"
           severity: CRITICAL,HIGH
           ignore-unfixed: true
-
-      - name: Upload scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: trivy-results.sarif
 
       - name: Push image to ECR
         id: push
