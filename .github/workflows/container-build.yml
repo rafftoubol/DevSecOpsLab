@@ -1,0 +1,27 @@
+name: Container Build
+
+on:
+  push:
+    paths:
+      - "web-server/**"
+  pull_request:
+    paths:
+      - "web-server/**"
+
+jobs:
+  container-security:
+    uses: your-org/devsecops-pipelines/.github/workflows/container-security-checks.yml@main
+    with:
+      dockerfile-path: web-server/Dockerfile
+    secrets:
+      aws-role-arn: ${{ secrets.AWS_ROLE_ARN }}
+
+  build:
+    needs: container-security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: |
+          docker build --no-cache -t my-fastapi-app web-server/

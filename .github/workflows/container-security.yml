@@ -1,0 +1,48 @@
+name: Container Security Checks
+
+on:
+  workflow_call:
+    inputs:
+      dockerfile-path:
+        required: true
+        type: string
+    secrets:
+      aws-role-arn:
+        required: true
+
+jobs:
+  pre-build:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout security pipelines repo
+        uses: actions/checkout@v4
+        with:
+          repository: your-org/devsecops-pipelines
+          path: devsecops-pipelines
+
+      - name: Authenticate to AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.aws-role-arn }}
+          aws-region: eu-north-1
+
+      - name: Fetch allowlist from S3
+        run: |
+          aws s3 cp s3://wexlop-security-allowlists/allowlists/base-images.json allowlist.json
+
+      - name: Check base images against allowlist
+        run: |
+          python devsecops-pipelines/scripts/check-base-images.py \
+            ${{ inputs.dockerfile-path }} \
+            allowlist.json
+
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: ${{ inputs.dockerfile-path }}

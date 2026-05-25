@@ -20,7 +20,7 @@ dockerfile = sys.argv[1]
 allowlist = sys.argv[2]
 
 with open(allowlist) as f:
-    allowed = set(json.load(f)["allowed"])
+    allowed = {image["ref"] for image in json.load(f)["images"]}
 
 failed = False
 for image in extract_base_images(dockerfile):
