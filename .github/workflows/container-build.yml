@@ -10,7 +10,7 @@ on:
 
 jobs:
   container-security:
-    uses: your-org/devsecops-pipelines/.github/workflows/container-security-checks.yml@main
+    uses: rafftoubol/DevSecOpsLab/.github/workflows/container-security-checks.yml@main
     with:
       dockerfile-path: web-server/Dockerfile
     secrets:
