@@ -21,11 +21,21 @@ The lab is structured in phases:
 6. **Runtime Security** — Falco for real-time threat detection, Prometheus and 
    Grafana for observability, and CloudTrail for audit logging
 
+#Container Build Security Pipeline
+Container security starts at the authoring of the dockerfile, which is why we shift left as much as possible,
+initially we check the base images pinned sha256 hashes against an s3 datastore containing allowed container images,
+this is completed with a simple immutable version controlled s3 bucket, a python script in /scripts and a workflow for 
+container-security which is called by the container-build gh action as a pre-build task. 
+<img width="1460" height="626" alt="image" src="https://github.com/user-attachments/assets/604e2392-6fea-4084-8f84-65ed298b1c91" />
+
+
+
+
 ### Features & Tech Stack   
 | Feature | Technology |
 |---|---|
 | Infrastructure Provisioning | Terraform |
-| Cloud Provider | AWS (EKS, ECR, VPC, IAM, KMS, Secrets Manager) |
+| Cloud Provider | AWS (EKS, ECR, VPC, IAM, KMS, Secrets Manager, S3) |
 | State Management | S3 + DynamoDB |
 | CI/CD Pipeline | GitHub Actions |
 | GitOps | ArgoCD |
@@ -38,12 +48,4 @@ The lab is structured in phases:
 | Observability | Prometheus, Grafana, CloudWatch, CloudTrail |
 | Certificate Management | cert-manager |
 
-# TODO LIST
-0. Basic VPC [x]
-1. VPC State in S3 [x]
-2. Secure Modules []
-3. Container Platform Setup []
-4. Kubernetes Hardening []
-5. CI/CD w/ Security Gates []
-  - IaC Scanning with tfSec [x]
-6. Runtime Security []
+
