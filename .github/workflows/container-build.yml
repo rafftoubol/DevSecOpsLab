@@ -10,7 +10,7 @@ on:
 
 jobs:
   container-security:
-    uses: ./.github/workflows/container-security-checks.yml
+    uses: ./.github/workflows/container-security.yml
     with:
       dockerfile-path: web-server/Dockerfile
     secrets:
