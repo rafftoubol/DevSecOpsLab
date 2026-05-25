@@ -7,6 +7,8 @@ on:
   pull_request:
     paths:
       - "web-server/**"
+  workflow_dispatch:
+
 permissions:
   id-token: write
   contents: read
